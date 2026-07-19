@@ -1131,3 +1131,134 @@ class VariDataCleaner1:
         average_absolute_diff_after_repair = np.abs(cleaned_data - dirty_data).sum()
         print("平均修复距离：", average_absolute_diff_after_repair)
 
+
+class MovingAverageClean(BaseCleaningAlgorithm):
+    """
+    移动平均清洗方法
+    使用滑动窗口平均值来平滑数据
+    """
+    def __init__(self, window_size=5):
+        self.window_size = window_size
+    
+    def clean(self, clean_data, current_dirty_data, **args):
+        """
+        使用移动平均清洗数据
+        
+        参数:
+            clean_data: 干净数据（用于参考）
+            current_dirty_data: 当前脏数据
+            **args: 其他参数
+        
+        返回:
+            cleaned_data: 清洗后的数据
+        """
+        n_rows, n_cols = current_dirty_data.shape
+        cleaned_data = current_dirty_data.copy()
+        
+        # 对每一列进行移动平均平滑
+        for col in range(n_cols):
+            col_data = cleaned_data[:, col]
+            # 使用卷积计算移动平均
+            window = np.ones(self.window_size) / self.window_size
+            smoothed = np.convolve(col_data, window, mode='same')
+            
+            # 处理边界效应
+            half_window = self.window_size // 2
+            smoothed[:half_window] = col_data[:half_window]
+            smoothed[-half_window:] = col_data[-half_window:]
+            
+            cleaned_data[:, col] = smoothed
+        
+        return cleaned_data
+
+
+class WeightedMovingAverageClean(BaseCleaningAlgorithm):
+    """
+    加权移动平均清洗方法
+    使用加权滑动窗口平滑数据（越近的数据权重越大）
+    """
+    def __init__(self, window_size=5):
+        self.window_size = window_size
+    
+    def clean(self, clean_data, current_dirty_data, **args):
+        """
+        使用加权移动平均清洗数据
+        
+        参数:
+            clean_data: 干净数据（用于参考）
+            current_dirty_data: 当前脏数据
+            **args: 其他参数
+        
+        返回:
+            cleaned_data: 清洗后的数据
+        """
+        n_rows, n_cols = current_dirty_data.shape
+        cleaned_data = current_dirty_data.copy()
+        
+        # 创建权重（越近的权重越大）
+        weights = np.arange(1, self.window_size + 1)
+        weights = weights / np.sum(weights)
+        
+        for col in range(n_cols):
+            col_data = cleaned_data[:, col]
+            smoothed = np.zeros_like(col_data)
+            
+            for i in range(n_rows):
+                # 确定窗口范围
+                start = max(0, i - self.window_size + 1)
+                end = i + 1
+                window_data = col_data[start:end]
+                
+                if len(window_data) < self.window_size:
+                    # 如果窗口不够大，使用简单平均
+                    smoothed[i] = np.mean(window_data)
+                else:
+                    # 使用加权平均
+                    smoothed[i] = np.sum(window_data * weights[:len(window_data)]) / np.sum(weights[:len(window_data)])
+            
+            cleaned_data[:, col] = smoothed
+        
+        return cleaned_data
+
+
+class ExponentialWeightedMovingAverageClean(BaseCleaningAlgorithm):
+    """
+    指数加权移动平均清洗方法
+    使用指数衰减权重进行平滑
+    """
+    def __init__(self, alpha=0.3):
+        """
+        参数:
+            alpha: 平滑因子，范围(0,1)，越大对新数据的响应越快
+        """
+        self.alpha = alpha
+    
+    def clean(self, clean_data, current_dirty_data, **args):
+        """
+        使用指数加权移动平均清洗数据
+        
+        参数:
+            clean_data: 干净数据（用于参考）
+            current_dirty_data: 当前脏数据
+            **args: 其他参数
+        
+        返回:
+            cleaned_data: 清洗后的数据
+        """
+        n_rows, n_cols = current_dirty_data.shape
+        cleaned_data = current_dirty_data.copy()
+        
+        for col in range(n_cols):
+            col_data = cleaned_data[:, col]
+            smoothed = np.zeros_like(col_data)
+            
+            # 初始值设为第一个数据点
+            smoothed[0] = col_data[0]
+            
+            # EWMA公式: S_t = alpha * Y_t + (1 - alpha) * S_{t-1}
+            for i in range(1, n_rows):
+                smoothed[i] = self.alpha * col_data[i] + (1 - self.alpha) * smoothed[i-1]
+            
+            cleaned_data[:, col] = smoothed
+        
+        return cleaned_data
