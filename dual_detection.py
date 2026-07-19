@@ -662,35 +662,18 @@ class VariDataCleaner1_detection:
 
 
 class LOFDetection(BaseCleaningAlgorithm):
-    """
-    LOF (Local Outlier Factor) 异常检测方法
-    使用局部离群因子检测异常点
-    """
+
     def __init__(self, n_neighbors=20, contamination=0.1):
-        """
-        参数:
-            n_neighbors: 邻居数量
-            contamination: 异常值比例
-        """
+     
         self.n_neighbors = n_neighbors
         self.contamination = contamination
     
     def clean(self, clean_data, current_dirty_data, **args):
-        """
-        使用LOF检测异常
-        
-        参数:
-            clean_data: 干净数据（用于参考）
-            current_dirty_data: 当前脏数据
-            **args: 其他参数
-        
-        返回:
-            error_mask: 错误掩码，1表示检测到错误
-        """
+     
         n_rows, n_cols = current_dirty_data.shape
         error_mask = np.zeros_like(current_dirty_data, dtype=int)
         
-        # 标准化数据
+
         scaler = StandardScaler()
         data_scaled = scaler.fit_transform(current_dirty_data)
         
@@ -705,7 +688,6 @@ class LOFDetection(BaseCleaningAlgorithm):
             )
             outlier_labels = lof.fit_predict(col_data)
             
-            # -1表示异常点
             outlier_mask = outlier_labels == -1
             error_mask[outlier_mask, col] = 1
         
@@ -713,35 +695,17 @@ class LOFDetection(BaseCleaningAlgorithm):
 
 
 class DBSCANDetection(BaseCleaningAlgorithm):
-    """
-    DBSCAN 密度聚类异常检测方法
-    使用密度聚类识别异常点
-    """
+
     def __init__(self, eps=0.5, min_samples=5):
-        """
-        参数:
-            eps: 邻域半径
-            min_samples: 最小样本数
-        """
+     
         self.eps = eps
         self.min_samples = min_samples
     
     def clean(self, clean_data, current_dirty_data, **args):
-        """
-        使用DBSCAN检测异常
         
-        参数:
-            clean_data: 干净数据（用于参考）
-            current_dirty_data: 当前脏数据
-            **args: 其他参数
-        
-        返回:
-            error_mask: 错误掩码，1表示检测到错误
-        """
         n_rows, n_cols = current_dirty_data.shape
         error_mask = np.zeros_like(current_dirty_data, dtype=int)
         
-        # 标准化数据
         scaler = StandardScaler()
         data_scaled = scaler.fit_transform(current_dirty_data)
         
@@ -753,7 +717,6 @@ class DBSCANDetection(BaseCleaningAlgorithm):
             dbscan = DBSCAN(eps=self.eps, min_samples=self.min_samples)
             cluster_labels = dbscan.fit_predict(col_data)
             
-            # -1表示噪声点（异常点）
             outlier_mask = cluster_labels == -1
             error_mask[outlier_mask, col] = 1
         
@@ -761,29 +724,13 @@ class DBSCANDetection(BaseCleaningAlgorithm):
 
 
 class ZScoreDetection(BaseCleaningAlgorithm):
-    """
-    Z-Score 异常检测方法
-    使用标准差检测异常值
-    """
+
     def __init__(self, threshold=3.0):
-        """
-        参数:
-            threshold: Z-Score阈值，超过该值被视为异常
-        """
+
         self.threshold = threshold
     
     def clean(self, clean_data, current_dirty_data, **args):
-        """
-        使用Z-Score检测异常
-        
-        参数:
-            clean_data: 干净数据（用于参考）
-            current_dirty_data: 当前脏数据
-            **args: 其他参数
-        
-        返回:
-            error_mask: 错误掩码，1表示检测到错误
-        """
+      
         n_rows, n_cols = current_dirty_data.shape
         error_mask = np.zeros_like(current_dirty_data, dtype=int)
         
@@ -799,7 +746,6 @@ class ZScoreDetection(BaseCleaningAlgorithm):
             # 计算Z-Score
             z_scores = np.abs((col_data - mean) / std)
             
-            # 标记异常值
             outlier_mask = z_scores > self.threshold
             error_mask[outlier_mask, col] = 1
         
