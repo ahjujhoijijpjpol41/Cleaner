@@ -307,7 +307,7 @@ def mae_error(d_repair: np.ndarray, d_clean: np.ndarray, d_dirty: np.ndarray):
 
 def meta_train():
     """元训练过程"""
-    model_para_dir = "comprehensive_model_para_ene_real_fur_meta"
+    model_para_dir = "model_para"
     os.makedirs(model_para_dir, exist_ok=True)
     
     # 创建元模型时使用测试数据集的维度
@@ -634,8 +634,8 @@ def test():
             writer = csv.writer(csvfile)
             writer.writerow(eval_header)
     
-    direct_model_para_dir = "comprehensive_model_para_ene_real_fur_meta"
-    dual_model_para_dir = "comprehensive_model_para_ene_real_fur_meta"
+    direct_model_para_dir = "model_para"
+    dual_model_para_dir = "model_para"
     
     # 获取所有模型文件并按epoch排序
     direct_model_files = natsorted([f for f in os.listdir(direct_model_para_dir) 
