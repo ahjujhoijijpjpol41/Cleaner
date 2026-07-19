@@ -9,9 +9,9 @@ import gymnasium as gym
 from collections import deque
 from sklearn.preprocessing import MinMaxScaler
 from constraints import RowConstraintMiner, RowConstraintMiner1, ColConstraintMiner, discover_variance_constraints
-from single import MTSCleanRow, MTSCleanRow_c, MTSClean, LocalSpeedAccelClean, GlocalSpeedAccelClean, VarianceConstraintClean, VariDataCleaner1, LocalSpeedClean, GlobalSpeedClean
-from dual_detection import MTSCleanRow_detection, LocalSpeedAccelClean_detection, GlocalSpeedAccelClean_detection, VarianceConstraintClean_detection, VariDataCleaner1_detection, LocalSpeedClean_detection, GlobalSpeedClean_detection
-from dual_repair import MTSCleanRow_repair, LocalSpeedAccelClean_repair, GlocalSpeedAccelClean_repair, VarianceConstraintClean_repair, VariDataCleaner1_repair, LocalSpeedClean_repair, GlobalSpeedClean_repair 
+from single import MTSCleanRow, MTSCleanRow_c, MTSClean, LocalSpeedAccelClean, GlocalSpeedAccelClean, VarianceConstraintClean, VariDataCleaner1, LocalSpeedClean, GlobalSpeedClean, MovingAverageClean, WeightedMovingAverageClean, ExponentialWeightedMovingAverageClean
+from dual_detection import MTSCleanRow_detection, LocalSpeedAccelClean_detection, GlocalSpeedAccelClean_detection, VarianceConstraintClean_detection, VariDataCleaner1_detection, LocalSpeedClean_detection, GlobalSpeedClean_detection, LOFDetection, DBSCANDetection, ZScoreDetection
+from dual_repair import MTSCleanRow_repair, LocalSpeedAccelClean_repair, GlocalSpeedAccelClean_repair, VarianceConstraintClean_repair, VariDataCleaner1_repair, LocalSpeedClean_repair, GlobalSpeedClean_repair, LinearInterpolationRepair, KNNRepair, MultiColumnKNNRepair 
 from scipy.optimize import linprog
 from tqdm import tqdm
 
@@ -154,6 +154,21 @@ def data_cleaning(method, clean_data, current_dirty_data):
                                      row_constraints=row_constraints, 
                                      speed_constraints=speed_constraints)
         return cleaned_data
+        
+    elif method == 'moving_average_clean':
+        instance = MovingAverageClean(window_size=5)
+        cleaned_data = instance.clean(clean_data, current_dirty_data)
+        return cleaned_data
+    
+    elif method == 'weighted_moving_average_clean':
+        instance = WeightedMovingAverageClean(window_size=5)
+        cleaned_data = instance.clean(clean_data, current_dirty_data)
+        return cleaned_data
+    
+    elif method == 'exponential_weighted_ma_clean':
+        instance = ExponentialWeightedMovingAverageClean(alpha=0.3)
+        cleaned_data = instance.clean(clean_data, current_dirty_data)
+        return cleaned_data
 
 
 class DataCleaningEnv():
@@ -163,10 +178,10 @@ class DataCleaningEnv():
         self.clean_data = clean_data
         self.direct_dirty_data = direct_dirty_data
         self.data_types = ['drift', 'gaussian', 'volatility', 'gradual', 'sudden']
-        self.cleaning_methods = ['local_speed_clean', 'global_speed_clean', 'local_speed_accel_clean', 'MTSCleanRow', 'global_speed_accel_clean', 'VariDataCleaner1', 'MTSClean']
+        self.cleaning_methods = ['local_speed_clean', 'global_speed_clean', 'local_speed_accel_clean', 'MTSCleanRow', 'global_speed_accel_clean', 'VariDataCleaner1', 'MTSClean', 'moving_average_clean', 'weighted_moving_average_clean', 'exponential_weighted_ma_clean']
         self.action_space = len(self.cleaning_methods)
-        self.detection_methods = ['local_speed_clean_detection', 'global_speed_clean_detection', 'local_speed_accel_clean_detection', 'global_speed_accel_clean_detection', 'MTSCleanRow_detection', 'VariDataCleaner1_detection']
-        self.repair_methods = ['local_speed_clean_repair', 'global_speed_clean_repair', 'local_speed_accel_clean_repair', 'global_speed_accel_clean_repair', 'MTSCleanRow_repair', 'VariDataCleaner1_repair']
+        self.detection_methods = ['local_speed_clean_detection', 'global_speed_clean_detection', 'local_speed_accel_clean_detection', 'global_speed_accel_clean_detection', 'MTSCleanRow_detection', 'VariDataCleaner1_detection', 'lof_detection', 'dbscan_detection', 'zscore_detection']
+        self.repair_methods = ['local_speed_clean_repair', 'global_speed_clean_repair', 'local_speed_accel_clean_repair', 'global_speed_accel_clean_repair', 'MTSCleanRow_repair', 'VariDataCleaner1_repair', 'linear_interpolation_repair', 'knn_repair', 'multi_column_knn_repair']
         self.detection_action_space = len(self.detection_methods)
         self.repair_action_space = len(self.repair_methods)
         self.clean_data_window = None
@@ -568,6 +583,18 @@ class DataCleaningEnv():
             db = DataBase(pd.DataFrame(current_dirty_data))
             error_mask = instance.variance_constraint_clean(db, variance_constraints, attr_indices, w_v=10, beta=0.5)
 
+        elif method == 'lof_detection':
+            instance = LOFDetection(n_neighbors=20, contamination=0.1)
+            error_mask = instance.clean(clean_data, current_dirty_data)
+    
+        elif method == 'dbscan_detection':
+            instance = DBSCANDetection(eps=0.5, min_samples=5)
+            error_mask = instance.clean(clean_data, current_dirty_data)
+        
+        elif method == 'zscore_detection':
+            instance = ZScoreDetection(threshold=3.0)
+            error_mask = instance.clean(clean_data, current_dirty_data)
+            
         else:
             raise ValueError(f"Unknown detection method: {method}")
         
@@ -634,6 +661,18 @@ class DataCleaningEnv():
             db = DataBase(pd.DataFrame(current_dirty_data))
             repaired_data = instance.variance_constraint_clean(db, variance_constraints, attr_indices, error_mask, w_v=10, beta=0.5)
 
+        elif method == 'linear_interpolation_repair':
+            instance = LinearInterpolationRepair()
+            repaired_data = instance.clean(clean_data, current_dirty_data, error_mask)
+        
+        elif method == 'knn_repair':
+            instance = KNNRepair(n_neighbors=5)
+            repaired_data = instance.clean(clean_data, current_dirty_data, error_mask)
+        
+        elif method == 'multi_column_knn_repair':
+            instance = MultiColumnKNNRepair(n_neighbors=5)
+            repaired_data = instance.clean(clean_data, current_dirty_data, error_mask)
+            
         else:
             raise ValueError(f"Unknown detection method: {method}")
         
