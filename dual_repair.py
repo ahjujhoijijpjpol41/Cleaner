@@ -7,7 +7,8 @@ import pandas as pd
 from scipy.optimize import linprog
 from scipy.optimize import minimize
 import random
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from sklearn.neighbors import KNeighborsRegressor
 from tqdm import tqdm
 from typing import Dict, List
 
@@ -872,3 +873,153 @@ class VariDataCleaner1_repair:
 
         average_absolute_diff_after_repair = np.abs(cleaned_data - dirty_data).sum()
         print("平均修复距离：", average_absolute_diff_after_repair)
+
+
+class LinearInterpolationRepair(BaseCleaningAlgorithm):
+
+    def __init__(self):
+        pass
+    
+    def clean(self, clean_data, current_dirty_data, detect_errors, **args):
+   
+        n_rows, n_cols = current_dirty_data.shape
+        repaired_data = current_dirty_data.copy()
+        
+        for col in range(n_cols):
+            col_data = repaired_data[:, col]
+            error_indices = np.where(detect_errors[:, col] == 1)[0]
+            
+            if len(error_indices) == 0:
+                continue
+            
+            # 获取非错误点的索引和值
+            good_indices = np.where(detect_errors[:, col] == 0)[0]
+            
+            if len(good_indices) == 0:
+               
+                col_data[:] = np.mean(col_data)
+                continue
+            
+            # 对每个错误点进行线性插值
+            for idx in error_indices:
+                # 找到前后最近的非错误点
+                prev_good = good_indices[good_indices < idx]
+                next_good = good_indices[good_indices > idx]
+                
+                if len(prev_good) == 0:
+                
+                    if len(next_good) > 0:
+                        col_data[idx] = col_data[next_good[0]]
+                    else:
+                        col_data[idx] = np.mean(col_data[good_indices])
+                elif len(next_good) == 0:
+           
+                    col_data[idx] = col_data[prev_good[-1]]
+                else:
+                    # 线性插值
+                    x0, x1 = prev_good[-1], next_good[0]
+                    y0, y1 = col_data[x0], col_data[x1]
+                    col_data[idx] = y0 + (y1 - y0) * (idx - x0) / (x1 - x0)
+            
+            repaired_data[:, col] = col_data
+        
+        return repaired_data
+
+
+class KNNRepair(BaseCleaningAlgorithm):
+    def __init__(self, n_neighbors=5):
+        self.n_neighbors = n_neighbors
+    
+    def clean(self, clean_data, current_dirty_data, detect_errors, **args):
+        n_rows, n_cols = current_dirty_data.shape
+        repaired_data = current_dirty_data.copy()
+        
+        # 对每一列分别修复
+        for col in range(n_cols):
+            col_data = repaired_data[:, col]
+            error_indices = np.where(detect_errors[:, col] == 1)[0]
+            
+            if len(error_indices) == 0:
+                continue
+            
+            good_indices = np.where(detect_errors[:, col] == 0)[0]
+            
+            if len(good_indices) == 0:
+                repaired_data[:, col] = np.mean(current_dirty_data[:, col])
+                continue
+            
+            X_train = current_dirty_data[good_indices, :]
+            X_train = np.delete(X_train, col, axis=1)
+            
+            if X_train.shape[1] == 0:
+                X_train = good_indices.reshape(-1, 1)
+                X_test = error_indices.reshape(-1, 1)
+            else:
+                X_test = current_dirty_data[error_indices, :]
+                X_test = np.delete(X_test, col, axis=1)
+            
+            y_train = col_data[good_indices]
+            
+            k = min(self.n_neighbors, len(good_indices))
+            if k == 0:
+                continue
+            
+            knn = KNeighborsRegressor(n_neighbors=k)
+            knn.fit(X_train, y_train)
+            
+            if len(error_indices) > 0:
+                predicted_values = knn.predict(X_test)
+                repaired_data[error_indices, col] = predicted_values
+        
+        return repaired_data
+
+
+class MultiColumnKNNRepair(BaseCleaningAlgorithm):
+
+    def __init__(self, n_neighbors=5):
+        """
+        参数:
+            n_neighbors: K值
+        """
+        self.n_neighbors = n_neighbors
+    
+    def clean(self, clean_data, current_dirty_data, detect_errors, **args):
+
+        n_rows, n_cols = current_dirty_data.shape
+        repaired_data = current_dirty_data.copy()
+
+        scaler = StandardScaler()
+        data_scaled = scaler.fit_transform(current_dirty_data)
+
+        has_error = np.any(detect_errors == 1, axis=1)
+        good_indices = np.where(~has_error)[0]
+        error_indices = np.where(has_error)[0]
+        
+        if len(good_indices) == 0:
+
+            for col in range(n_cols):
+                repaired_data[:, col] = np.mean(current_dirty_data[:, col])
+            return repaired_data
+        
+        if len(error_indices) == 0:
+            return repaired_data
+        
+        X_train = data_scaled[good_indices, :]
+        y_train = X_train
+
+        X_test = data_scaled[error_indices, :]
+
+        k = min(self.n_neighbors, len(good_indices))
+        
+        if k == 0:
+            return repaired_data
+        
+        knn = KNeighborsRegressor(n_neighbors=k)
+        knn.fit(X_train, y_train)
+        
+        # 预测错误行的值
+        if len(error_indices) > 0:
+            predicted_values = knn.predict(X_test)
+            repaired_data[error_indices, :] = scaler.inverse_transform(predicted_values)
+        
+        return repaired_data
