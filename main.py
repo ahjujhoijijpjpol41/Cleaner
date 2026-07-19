@@ -18,7 +18,6 @@ import copy
 from torch.optim import Adam
 
 
-# # ========== 在这里添加随机种子设置 ==========
 # def set_seed(seed=42):
 #     """固定所有随机种子"""
 #     random.seed(seed)
@@ -32,7 +31,7 @@ from torch.optim import Adam
 #     os.environ['PYTHONHASHSEED'] = str(seed)
 #     print(f"Random seed {seed} has been set")
 
-# # 调用随机种子设置
+
 # set_seed(42)
 # # ==========================================
 
