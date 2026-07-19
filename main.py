@@ -116,13 +116,13 @@ def update_reward_histories(direct_reward, detection_reward, repair_reward):
     global_detection_repair_reward_history.append(detection_repair_combined)
 # =========================================================
 
-# 环境加载
-train_datasets = {
-    'Energy': 'Energy_Clean.csv',
-    'Oil': 'IDF_OilTemp_Clean.csv',
-    'Power': 'IDF_Power_Clean.csv',
-    'IDF': 'idf.csv'
-}
+# # 环境加载
+# train_datasets = {
+#     'Energy': 'Energy_Clean.csv',
+#     'Oil': 'IDF_OilTemp_Clean.csv',
+#     'Power': 'IDF_Power_Clean.csv',
+#     'IDF': 'idf.csv'
+# }
 
 # 测试数据集
 test_dirty_dataset = 'Energy_Dirty.csv'
@@ -146,19 +146,19 @@ clean_datas = {}
 num_columns = {}
 window_sizes = 200  # 统一窗口大小
 
-# 加载训练数据集
-for name, path in train_datasets.items():
-    clean_data_df = pd.read_csv(path, header=None, low_memory=False).iloc[1:, 1:]
-    num_column = clean_data_df.shape[1]
-    clean_data = np.array(clean_data_df.values)
-    clean_data = clean_data.astype(np.float64)
-    scaler = MinMaxScaler()
-    clean_data = scaler.fit_transform(clean_data)
+# # 加载训练数据集
+# for name, path in train_datasets.items():
+#     clean_data_df = pd.read_csv(path, header=None, low_memory=False).iloc[1:, 1:]
+#     num_column = clean_data_df.shape[1]
+#     clean_data = np.array(clean_data_df.values)
+#     clean_data = clean_data.astype(np.float64)
+#     scaler = MinMaxScaler()
+#     clean_data = scaler.fit_transform(clean_data)
     
-    envs[name] = DataCleaningEnv(clean_data, window_size=window_sizes)
-    scalers[name] = scaler
-    clean_datas[name] = clean_data
-    num_columns[name] = num_column
+#     envs[name] = DataCleaningEnv(clean_data, window_size=window_sizes)
+#     scalers[name] = scaler
+#     clean_datas[name] = clean_data
+#     num_columns[name] = num_column
 
 # 模型构建
 def create_agent(env, num_column):
