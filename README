@@ -1,1 +1,53 @@
-Cleaner
+# Cleaner: An Autonomous Scheduling Framework for Time-Series Data Cleaning
+
+This repository provides the implementation example of **Cleaner**, an autonomous scheduling framework for time-series data cleaning described in our paper. Users can directly run the provided code to reproduce the cleaning process and obtain the cleaning results on the **Energy_real** dataset used in our evaluation.
+
+---
+
+## Environment Requirements
+
+The implementation is tested under the following environment:
+
+- **Python:** 3.8.0
+
+The required Python packages are:
+
+```text
+gymnasium==1.0.0
+matplotlib==3.7.5
+natsort==8.4.0
+numpy==1.24.4
+pandas==2.0.3
+scikit_learn==1.3.2
+scipy==1.18.0
+torch==1.8.0
+tqdm==4.67.1
+
+Installation
+
+We recommend creating a new Python environment before running Cleaner:
+
+conda create -n cleaner python=3.8
+conda activate cleaner
+
+Install all required dependencies using:
+
+pip install -r requirements.txt
+
+Users can also manually install the required packages listed above.
+
+Running Cleaner
+
+After installing the required environment, Cleaner can be executed directly:
+
+python main.py
+
+The provided example will run Cleaner on the Energy_real dataset and generate the corresponding time-series cleaning results.
+
+Dataset
+
+The current implementation provides an example evaluation on:
+
+Energy_real
+
+The dataset contains real-world time-series data with heterogeneous and evolving errors.
