@@ -58,6 +58,7 @@ python main.py
 The provided example will run **Cleaner** on the **Energy_real** dataset and generate the corresponding time-series cleaning results.
 
 > ✅ No modification of the source code is required.
+In addition, users can retrain the model by themselves and then use the retrained parameters for inference to avoid result bias.
 
 ---
 
