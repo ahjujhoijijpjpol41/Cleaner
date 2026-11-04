@@ -2,6 +2,7 @@
 
 This repository provides the **implementation example of Cleaner** and **its extended version Cleaner-TR proposed in our paper**. Cleaner is an autonomous scheduling framework for time-series data cleaning. Users can directly run the provided code to reproduce the cleaning process and obtain the cleaning results on the **Energy_real or other datasets** used in our evaluation.
 
+The framework can be retrained before execution to obtain more accurate results.
 ---
 
 ## ⚙️ Environment Requirements
