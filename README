@@ -73,6 +73,6 @@ The dataset contains real-world time-series data with **heterogeneous and evolvi
 
 ---
 
-In addition, we provide other available datasets for use, such as Power_real and OilTemp_real.
+In addition, we provide other available datasets for use, such as Power_real, OilTemp_real and IDF.
 
 ---
